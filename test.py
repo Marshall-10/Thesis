@@ -8,7 +8,8 @@ from torch.utils.data import TensorDataset, DataLoader
 import glob
 from tqdm import tqdm
 from model.res_net_use_this import ResNetWithDropoutAndBatchNorm, ResidualBlock
-
+import utils
+from utils import *
 
 # Hyperparameters
 batch_size = 32
@@ -78,7 +79,7 @@ if __name__ == '__main__':
     # Load test data
     test_data_list = []
 
-    data_dir = "C:\\Users\\Hussein\\OneDrive\\Desktop\\RB Pi\\CSI_Dataset\\Data\\test\\*.txt"
+    data_dir = "data/Data/test/*.txt"
     files = glob.glob(data_dir)
     test_data = load_and_preprocess_data(files)
     test_data_list.append(test_data)
@@ -112,7 +113,7 @@ if __name__ == '__main__':
 
     # Load the trained model
     model = ResNetWithDropoutAndBatchNorm(ResidualBlock, [2, 2, 2, 2], num_classes=3).cuda()  # Adjusted for three classes
-    model.load_state_dict(torch.load('final_model.ckpt'))  # Load the final trained model
+    model.load_state_dict(torch.load('trained_models/final_model.ckpt'))  # Load the final trained model
     model.eval()
 
     class_names = ['individual_1', 'random_individual', 'nobody']
