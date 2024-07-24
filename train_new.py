@@ -214,6 +214,11 @@ for epoch in range(num_epochs):
             print(f'Early stopping after {epoch + 1} epochs.')
             break
 
+# Save the model at the end of every epoch
+epoch_save_path = os.path.join(save_dir, f'model_epoch_{epoch + 1}.ckpt')
+torch.save(model.state_dict(), epoch_save_path)
+print(f'Model for epoch {epoch + 1} saved to {epoch_save_path}')
+
 # Save the final model
 torch.save(model.state_dict(), save_path)
 print(f'Final model saved to {save_path}')

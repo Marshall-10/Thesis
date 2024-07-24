@@ -1,15 +1,10 @@
 import pandas as pd
 import numpy as np
 import torch
-# import torch.nn as nn
-# from torch.autograd import Variable
 from torch.utils.data import TensorDataset, DataLoader
-# import os
 import glob
 from tqdm import tqdm
 from model.res_net_use_this import ResNetWithDropoutAndBatchNorm, ResidualBlock
-import utils
-from utils import *
 
 # Hyperparameters
 batch_size = 32
@@ -43,6 +38,10 @@ def load_and_preprocess_data(files):
             continue
 
         # Extract relevant features
+        if 'timestamp' not in data.columns or 'subcarrier' not in data.columns or 'amplitude' not in data.columns or 'phase' not in data.columns:
+            print(f"Missing required columns in file: {file}")
+            continue
+
         features = data.loc[:, ['timestamp', 'subcarrier', 'amplitude', 'phase']]
 
         # Fix timestamp format
@@ -50,17 +49,29 @@ def load_and_preprocess_data(files):
         features.loc[:, 'timestamp'] = features['timestamp'].str.replace(':', '.', 1)
 
         # Convert timestamp to a datetime object
-        features.loc[:, 'timestamp'] = pd.to_datetime(features['timestamp'], format='%Y-%m-%d %H-%M-%S.%f')
+        try:
+            features.loc[:, 'timestamp'] = pd.to_datetime(features['timestamp'], format='%Y-%m-%d %H-%M-%S.%f')
+        except Exception as e:
+            print(f"Error parsing timestamp in file {file}: {e}")
+            continue
 
         # Convert amplitude and phase to numeric values if they are strings
-        if features['amplitude'].dtype == 'object':
-            features.loc[:, 'amplitude'] = features['amplitude'].str.replace('.', '').astype(float)
-        if features['phase'].dtype == 'object':
-            features.loc[:, 'phase'] = features['phase'].str.replace('.', '').astype(float)
+        try:
+            if features['amplitude'].dtype == 'object':
+                features.loc[:, 'amplitude'] = features['amplitude'].str.replace('.', '').astype(float)
+            if features['phase'].dtype == 'object':
+                features.loc[:, 'phase'] = features['phase'].str.replace('.', '').astype(float)
+        except Exception as e:
+            print(f"Error converting amplitude/phase to numeric in file {file}: {e}")
+            continue
 
         # Pivot the data to have subcarriers as columns and timestamps as rows
-        amplitude_pivot = features.pivot(index='timestamp', columns='subcarrier', values='amplitude')
-        phase_pivot = features.pivot(index='timestamp', columns='subcarrier', values='phase')
+        try:
+            amplitude_pivot = features.pivot(index='timestamp', columns='subcarrier', values='amplitude')
+            phase_pivot = features.pivot(index='timestamp', columns='subcarrier', values='phase')
+        except Exception as e:
+            print(f"Error pivoting data in file {file}: {e}")
+            continue
 
         # Fill any missing values if necessary
         amplitude_pivot.fillna(method='ffill', inplace=True)
@@ -70,6 +81,9 @@ def load_and_preprocess_data(files):
         combined_data = pd.concat([amplitude_pivot, phase_pivot], axis=1)
         combined_data = normalize_data(combined_data)  # Normalize data
         data_list.append(combined_data)
+
+    if not data_list:
+        raise ValueError("No valid data segments found after preprocessing.")
 
     all_data = pd.concat(data_list)
 
@@ -81,6 +95,9 @@ if __name__ == '__main__':
 
     data_dir = "data/Data/test/*.txt"
     files = glob.glob(data_dir)
+    if not files:
+        raise ValueError(f"No files found in directory: {data_dir}")
+
     test_data = load_and_preprocess_data(files)
     test_data_list.append(test_data)
 
